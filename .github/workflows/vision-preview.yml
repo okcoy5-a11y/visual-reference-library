@@ -1,0 +1,115 @@
+name: Automatically create WebP vision previews
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.jpg'
+      - '*.jpeg'
+      - '*.png'
+      - '*.JPG'
+      - '*.JPEG'
+      - '*.PNG'
+      - '**/*.jpg'
+      - '**/*.jpeg'
+      - '**/*.png'
+      - '**/*.JPG'
+      - '**/*.JPEG'
+      - '**/*.PNG'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-previews:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check Pillow
+
+      - name: Generate previews for originals without one
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageOps
+          import io
+
+          ROOT = Path('.')
+          LIMIT = 800 * 1024
+          MAX_EDGE = 1800
+          QUALITIES = (84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40)
+          EXTENSIONS = {'.jpg', '.jpeg', '.png'}
+
+          def has_preview(src):
+              return (src.with_name(src.stem + '_vision_preview.webp').exists()
+                      or src.with_name(src.stem + '_preview.webp').exists())
+
+          def encode(image):
+              while True:
+                  last = b''
+                  for quality in QUALITIES:
+                      buf = io.BytesIO()
+                      image.save(buf, format='WEBP', quality=quality, method=6)
+                      last = buf.getvalue()
+                      if len(last) <= LIMIT:
+                          return last, image.size
+                  if max(image.size) <= 16:
+                      return last, image.size
+                  image = image.resize(
+                      (max(1, int(image.width * 0.85)), max(1, int(image.height * 0.85))),
+                      Image.Resampling.LANCZOS)
+
+          sources = sorted(p for p in ROOT.rglob('*')
+                           if p.is_file()
+                           and p.suffix.lower() in EXTENSIONS
+                           and not any(part in {'.git', '.github'} for part in p.parts)
+                           and not p.stem.lower().endswith(('_preview', '_vision_preview')))
+          created = 0
+          for src in sources:
+              if has_preview(src):
+                  print(f'SKIP: preview already exists for {src}')
+                  continue
+              try:
+                  with Image.open(src) as original:
+                      try:
+                          original.seek(0)
+                      except EOFError:
+                          pass
+                      image = ImageOps.exif_transpose(original)
+                      alpha = 'A' in image.getbands() or 'transparency' in image.info
+                      image = image.convert('RGBA' if alpha else 'RGB')
+                      image.thumbnail((MAX_EDGE, MAX_EDGE), Image.Resampling.LANCZOS)
+                      data, dimensions = encode(image)
+                  target = src.with_name(src.stem + '_vision_preview.webp')
+                  target.write_bytes(data)
+                  print(f'CREATED: {target} | {dimensions[0]}x{dimensions[1]} | {len(data)} bytes')
+                  created += 1
+              except Exception as exc:
+                  print(f'ERROR: {src}: {type(exc).__name__}: {exc}')
+          print(f'New previews: {created}')
+          PY
+
+      - name: Commit generated previews
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          if git diff --cached --quiet; then
+            echo 'No new previews to commit.'
+            exit 0
+          fi
+          git commit -m 'Generate WebP previews automatically'
+          git push origin HEAD:main

@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ENDFIELD HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --yellow:#f2d230;
+    --yellow2:#f7e35a;
+    --panel:rgba(20,20,22,0.85);
+    --panelBorder:rgba(255,255,255,0.1);
+    --txtGray:#8b8d92;
+    --red:#c0392b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Rajdhani',sans-serif;}
+  #viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden;}
+  #stage{
+    position:relative;flex:none;
+    width:2560px;height:1200px;
+    transform-origin:center center;
+    background:radial-gradient(ellipse at 50% 35%, #15151a 0%, #0a0a0c 55%, #000 100%);
+    overflow:hidden;user-select:none;-webkit-user-select:none;
+  }
+  #stars{position:absolute;inset:0;background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0, transparent 100%),
+      radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.3) 0, transparent 100%),
+      radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.25) 0, transparent 100%),
+      radial-gradient(1px 1px at 90% 20%, rgba(255,255,255,0.3) 0, transparent 100%);
+    background-size:2560px 1200px;opacity:0.6;}
+
+  /* ================= 顶部 ================= */
+  #topicons{position:absolute;left:793px;top:56px;width:400px;height:50px;display:flex;gap:18px;z-index:50;}
+  .ticon{width:50px;height:50px;background:rgba(255,255,255,0.05);border:1px solid var(--panelBorder);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:#cfd0d4;font-size:20px;transition:.2s;}
+  .ticon.active{background:var(--yellow);color:#111;border-color:var(--yellow);}
+  .ticon:hover{border-color:var(--yellow);}
+
+  .respill{position:absolute;top:56px;height:46px;background:rgba(10,10,12,0.75);border:1px solid var(--panelBorder);
+    display:flex;align-items:center;gap:10px;padding:0 18px;font-family:'Orbitron';font-weight:700;font-size:22px;color:#fff;letter-spacing:1px;z-index:50;}
+  #resCube{left:1299px;width:193px;}
+  #resCoin{left:1557px;width:236px;}
+  .pillicon{width:16px;height:16px;flex:none;}
+  .pillicon.cube{background:var(--yellow);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);}
+  .pillicon.coin{background:var(--yellow);border-radius:50%;}
+
+  #backbtn{position:absolute;left:2402px;top:56px;width:56px;height:46px;background:rgba(255,255,255,0.06);border:1px solid var(--panelBorder);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ddd;font-size:18px;z-index:50;}
+  #backbtn:hover{border-color:var(--yellow);color:var(--yellow);}
+
+  #floatctrls{position:absolute;left:2402px;top:122px;width:56px;display:flex;flex-direction:column;gap:8px;z-index:50;}
+  .fctrl{width:56px;height:56px;background:var(--yellow);clip-path:polygon(15% 0,100% 0,100% 85%,85% 100%,0 100%,0 15%);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;color:#111;font-size:20px;}
+  .fctrl:not(.on){background:rgba(255,255,255,0.08);color:#ddd;}
+  .fctrl .dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#555;}
+  .fctrl.on .dot{background:#2ecc71;box-shadow:0 0 6px #2ecc71;}
+
+  /* ================= 左右侧弧形面板 ================= */
+  .panel,.rpanel{position:absolute;background:var(--panel);border:1px solid var(--panelBorder);cursor:pointer;
+    transition:.2s;display:flex;align-items:center;z-index:50;
+    clip-path:polygon(0 0,100% 0,100% 100%,8% 100%,0 85%);}
+  .panel{flex-direction:column;justify-content:center;gap:10px;color:#cfd0d4;}
+  .panel:hover,.rpanel:hover{border-color:var(--yellow);}
+  .panel.active,.rpanel.active{background:var(--yellow);color:#111;}
+  .panel .picon{font-size:30px;}
+  .panel .plabel{font-size:20px;letter-spacing:2px;font-weight:600;}
+
+  #panelOperators{left:223px;top:183px;width:460px;height:202px;transform:rotate(-7deg) translateX(-14px);}
+  #panelFormation{left:223px;top:397px;width:460px;height:194px;transform:rotate(-3deg) translateX(-6px);position:absolute;}
+  #panelFormation .arrow{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:#888;font-size:18px;}
+  #panelFriends{left:223px;top:603px;width:220px;height:204px;transform:rotate(4deg) translateX(6px);flex-direction:column;justify-content:center;gap:10px;color:#cfd0d4;}
+  #panelMore{left:463px;top:603px;width:220px;height:204px;transform:rotate(9deg) translateX(14px);flex-direction:column;justify-content:center;gap:10px;color:#cfd0d4;}
+
+  #panelResInfo{position:absolute;left:223px;top:871px;width:554px;height:150px;background:var(--panel);border:1px solid var(--panelBorder);
+    border-left:3px solid var(--yellow);padding:18px 22px;display:flex;flex-direction:column;justify-content:space-between;z-index:50;}
+  .resrow{display:flex;flex-direction:column;gap:5px;}
+  .resrow .rtop{display:flex;justify-content:space-between;font-size:19px;color:#e8e8ea;letter-spacing:1px;}
+  .resrow .rtop b{font-family:'Orbitron';font-weight:700;color:#fff;}
+  .barbg{width:100%;height:6px;background:rgba(255,255,255,0.1);}
+  .barfg{height:100%;background:var(--yellow);width:96%;}
+  .factoryinfo{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--txtGray);letter-spacing:2px;}
+
+  .rpanel{left:1937px;width:478px;height:133px;gap:18px;padding:0 28px;color:#d6d6da;
+    clip-path:polygon(8% 0,100% 0,100% 100%,0 100%,0 15%);}
+  .rpanel .picon{font-size:24px;width:28px;text-align:center;}
+  .rpanel .plabel{font-size:21px;letter-spacing:3px;font-weight:600;}
+  #panelTask{top:168px;transform:rotate(-9deg) translateX(10px);}
+  #panelMap{top:313px;transform:rotate(-4deg) translateX(4px);}
+  #panelArchive{top:458px;transform:rotate(0deg);}
+  #panelBag{top:603px;transform:rotate(4deg) translateX(4px);}
+  #panelShop{top:748px;transform:rotate(9deg) translateX(10px);}
+
+  #panelNews{position:absolute;left:1937px;top:899px;width:499px;height:191px;background:var(--panel);border:1px solid var(--panelBorder);overflow:hidden;z-index:50;}
+  .newshead{display:flex;height:34px;}
+  .badge{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;letter-spacing:1px;color:#fff;}
+  .badge.breaking{background:var(--red);flex:1;padding:0 14px;justify-content:flex-start;}
+  .badge.upgrade{background:var(--red);width:110px;}
+  .newsbody{padding:14px 20px;}
+  .newstitle{font-family:'Orbitron';font-size:22px;font-weight:700;color:#fff;letter-spacing:1px;margin-bottom:10px;}
+  .newsbar{width:100%;height:8px;background:rgba(255,255,255,0.08);margin-bottom:10px;}
+  .newsbar i{display:block;height:100%;width:55%;background:linear-gradient(90deg,#8a7a1e,var(--yellow));}
+  .newsdesc{font-size:13px;color:var(--txtGray);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* ================= 中央 3D 倾斜罗盘 ================= */
+  #dialPerspective{position:absolute;left:990px;top:140px;width:1200px;height:1040px;perspective:1700px;z-index:6;}
+  #dialTilt{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(26deg);}
+
+  #bezelOuter{position:absolute;left:130px;top:50px;width:940px;height:940px;border-radius:50%;
+    border:2px solid rgba(255,255,255,0.18);background:radial-gradient(circle,rgba(255,255,255,0.02),transparent 70%);
+    pointer-events:none;}
+  .tick{position:absolute;left:50%;top:50%;width:2px;height:16px;background:rgba(255,255,255,0.25);transform-origin:50% 470px;pointer-events:none;}
+  .tick.hl{background:var(--yellow);height:22px;}
+  .bezelTri{position:absolute;width:0;height:0;pointer-events:none;
+    border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid var(--yellow);}
+  #triTop{left:1070px;top:38px;}
+  #triBottom{left:1070px;top:1004px;transform:rotate(180deg);}
+
+  #dialRotor{position:absolute;left:130px;top:50px;width:940px;height:940px;}
+  #terrainCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:0.9;}
+  .beam{position:absolute;left:470px;top:470px;width:470px;height:2px;transform-origin:0 50%;pointer-events:none;}
+  .outpost{position:absolute;width:34px;height:50px;transform:translate(-50%,-70%);pointer-events:auto;cursor:pointer;z-index:6;text-align:center;}
+  .outpost .ring{position:absolute;left:50%;top:0;width:30px;height:30px;transform:translate(-50%,0);border:2px solid #b08a2e;border-radius:50%;opacity:0;transition:.2s;}
+  .outpost:hover .ring{opacity:1;}
+  .outpost .sq{position:absolute;left:50%;top:8px;width:13px;height:13px;transform:translate(-50%,0) rotate(45deg);
+    background:var(--yellow);box-shadow:0 0 10px rgba(242,210,48,0.8);}
+  .outpost .lbl{position:absolute;top:34px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:2px;color:#d8cf9a;white-space:nowrap;}
+
+  #compassRing{position:absolute;left:385px;top:305px;width:430px;height:430px;border-radius:50%;
+    border:7px solid var(--yellow);background:rgba(0,0,0,0.5);z-index:7;pointer-events:auto;}
+  #compassN{position:absolute;left:600px;top:546px;transform:translate(-50%,-50%);
+    font-family:'Orbitron';font-weight:700;font-size:26px;color:#fff;letter-spacing:2px;z-index:8;pointer-events:none;}
+  #needle{position:absolute;left:600px;top:520px;width:16px;height:820px;transform:translate(-50%,-50%) rotate(145deg);
+    transform-origin:center center;z-index:7;pointer-events:none;}
+  #needle .half1{position:absolute;top:0;left:0;width:100%;height:50%;background:linear-gradient(180deg,var(--yellow),var(--yellow2));
+    clip-path:polygon(50% 0,100% 94%,50% 100%,0 94%);}
+  #needle .half2{position:absolute;bottom:0;left:0;width:100%;height:50%;background:linear-gradient(180deg,#9a9a9a,#555);
+    clip-path:polygon(50% 0,100% 6%,50% 100%,0 6%);}
+  #needle2{position:absolute;left:600px;top:520px;width:5px;height:620px;transform:translate(-50%,-50%) rotate(40deg);
+    transform-origin:center center;z-index:6;pointer-events:none;background:linear-gradient(180deg,#fff,rgba(255,255,255,0));}
+  #needle3{position:absolute;left:600px;top:520px;width:5px;height:560px;transform:translate(-50%,-50%) rotate(-25deg);
+    transform-origin:center center;z-index:6;pointer-events:none;background:linear-gradient(180deg,#fff,rgba(255,255,255,0));}
+  #dialLogo{position:absolute;left:600px;top:845px;transform:translateX(-50%);font-family:'Orbitron';font-weight:700;
+    font-size:15px;letter-spacing:6px;color:rgba(255,255,255,0.35);z-index:7;pointer-events:none;}
+
+  #hint{position:absolute;left:1037px;top:60px;width:480px;font-size:14px;color:#9fa0a6;letter-spacing:1px;
+    transition:opacity 1s;z-index:9;}
+
+  .tooltip{position:fixed;min-width:200px;background:rgba(10,10,12,0.95);border:1px solid var(--yellow);
+    padding:10px 14px;font-size:13px;color:#eee;z-index:200;display:none;line-height:1.6;}
+
+  /* ================= 底部 ================= */
+  #coordText{position:absolute;left:1256px;top:993px;width:300px;font-size:17px;color:#cfd0d4;letter-spacing:1px;
+    font-family:'Orbitron';z-index:50;}
+  #deploybar{position:absolute;left:979px;top:1029px;width:724px;height:87px;z-index:50;
+    background:rgba(15,15,16,0.85);border:1px solid var(--panelBorder);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+  #deploybar .loc{display:flex;align-items:center;gap:12px;color:#fff;font-size:22px;font-weight:600;letter-spacing:1px;}
+  #deploybar .loc .diamond{width:14px;height:14px;background:var(--yellow);transform:rotate(45deg);}
+  #deployBtn{background:var(--yellow);color:#111;font-weight:700;font-size:20px;letter-spacing:4px;border:none;
+    padding:14px 34px;cursor:pointer;clip-path:polygon(10% 0,100% 0,100% 100%,0 100%,0 30%);transition:.15s;}
+  #deployBtn:active{transform:scale(0.95);}
+  #deployBtn.pulse{animation:pulse .6s ease;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,210,48,0.7);}100%{box-shadow:0 0 0 30px rgba(242,210,48,0);}}
+
+  #logo{position:absolute;left:50%;top:1140px;transform:translateX(-50%);font-family:'Orbitron';font-weight:900;
+    font-size:26px;letter-spacing:10px;color:#fff;z-index:50;}
+  #disclaimer{position:absolute;left:36px;top:1175px;width:1400px;font-size:11px;color:#55565c;letter-spacing:0.5px;z-index:50;}
+
+  #toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:rgba(10,10,12,0.95);
+    border:1px solid var(--yellow);color:#fff;padding:12px 24px;font-size:14px;border-radius:4px;z-index:999;
+    opacity:0;transition:.3s;pointer-events:none;max-width:80vw;text-align:center;}
+  #toast.show{opacity:1;}
+
+  .gyroModal{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;z-index:1000;}
+  .gyroModal.show{display:flex;}
+  .gyroBox{background:#15151a;border:1px solid var(--yellow);padding:30px 36px;max-width:380px;text-align:center;color:#eee;}
+  .gyroBox button{margin-top:18px;background:var(--yellow);border:none;color:#111;font-weight:700;padding:10px 26px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div id="viewport">
+  <div id="stage">
+    <div id="stars"></div>
+
+    <div id="topicons">
+      <div class="ticon active" data-k="t1">◆</div>
+      <div class="ticon" data-k="t2">⊞</div>
+      <div class="ticon" data-k="t3">▲</div>
+      <div class="ticon" data-k="t4">•</div>
+    </div>
+    <div class="respill" id="resCube"><span class="pillicon cube"></span><span id="cubeVal">2,468</span></div>
+    <div class="respill" id="resCoin"><span class="pillicon coin"></span><span id="coinVal">161,753</span></div>
+    <div id="backbtn">◀</div>
+    <div id="floatctrls">
+      <div class="fctrl" id="fsBtn" title="全屏">⛶<span class="dot"></span></div>
+      <div class="fctrl" id="gyroBtn" title="陀螺仪">◈<span class="dot"></span></div>
+    </div>
+
+    <div class="panel" id="panelOperators"><div class="picon">👤</div><div class="plabel">干员</div></div>
+    <div class="panel" id="panelFormation"><div class="picon">⚏</div><div class="plabel">编队</div><div class="arrow">◀</div></div>
+    <div class="panel" id="panelFriends"><div class="picon">💬</div><div class="plabel">好友</div></div>
+    <div class="panel" id="panelMore"><div class="picon">⬡</div><div class="plabel">更多</div></div>
+
+    <div id="panelResInfo">
+      <div class="resrow"><div class="rtop"><span>北部岩溴深坑</span><b>14.4K/15K</b></div><div class="barbg"><div class="barfg" style="width:96%"></div></div></div>
+      <div class="resrow"><div class="rtop"><span>大盐碱地</span><b>14.4K/15K</b></div><div class="barbg"><div class="barfg" style="width:96%"></div></div></div>
+      <div class="factoryinfo"><span>FACTORY INFO</span><span>···</span></div>
+    </div>
+
+    <div class="rpanel" id="panelTask"><div class="picon">▣</div><div class="plabel">任务</div></div>
+    <div class="rpanel" id="panelMap"><div class="picon">🗺</div><div class="plabel">地图</div></div>
+    <div class="rpanel" id="panelArchive"><div class="picon">▤</div><div class="plabel">档案</div></div>
+    <div class="rpanel active" id="panelBag"><div class="picon">⬢</div><div class="plabel">背包</div></div>
+    <div class="rpanel" id="panelShop"><div class="picon">🛒</div><div class="plabel">采购</div></div>
+
+    <div id="panelNews">
+      <div class="newshead"><div class="badge breaking">BREAKING NEWS</div><div class="badge upgrade">UPGRADE</div></div>
+      <div class="newsbody">
+        <div class="newstitle">ENGINEERING CENTER</div>
+        <div class="newsbar"><i></i></div>
+        <div class="newsdesc">第四谷地产能提升·新前哨站建设中·资源配额已更新 ...</div>
+      </div>
+    </div>
+
+    <!-- 中央 3D 倾斜罗盘 -->
+    <div id="dialPerspective">
+      <div id="dialTilt">
+        <div id="bezelOuter"></div>
+        <div class="bezelTri" id="triTop"></div>
+        <div class="bezelTri" id="triBottom"></div>
+        <div id="dialRotor">
+          <canvas id="terrainCanvas"></canvas>
+        </div>
+        <div id="compassRing"></div>
+        <div id="compassN">N</div>
+        <div id="needle"><div class="half1"></div><div class="half2"></div></div>
+        <div id="needle2"></div>
+        <div id="needle3"></div>
+        <div id="dialLogo">ENDFIELD</div>
+      </div>
+    </div>
+    <div id="hint">陀螺仪已启用·倾斜手机查看视差·拖拽旋转雷达</div>
+    <div class="tooltip" id="tooltip"></div>
+
+    <div id="coordText">最新坐标 [16.3, 14.5]</div>
+    <div id="deploybar">
+      <div class="loc"><span class="diamond"></span><span>四号谷地</span></div>
+      <button id="deployBtn">部 署</button>
+    </div>
+    <div id="logo">ENDFIELD</div>
+    <div id="disclaimer">本界面为游戏UI风格复刻演示 · 数值与内容均为模拟展示 · 不代表真实游戏数据</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div class="gyroModal" id="gyroModal">
+  <div class="gyroBox">
+    <div style="font-size:16px;margin-bottom:6px;">需要运动传感器权限</div>
+    <div style="font-size:13px;color:#aaa;">开启后可倾斜手机查看雷达视差效果</div>
+    <button id="gyroAllow">允许</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+(function(){
+
+/* ---------- 缩放适配 ---------- */
+const stage = document.getElementById('stage');
+function fitStage(){
+  const scale = Math.min(window.innerWidth/2560, window.innerHeight/1200);
+  stage.style.transform = 'scale('+scale+')';
+}
+fitStage();
+window.addEventListener('resize', fitStage);
+window.addEventListener('orientationchange', function(){ setTimeout(fitStage,300); });
+
+/* ---------- Toast ---------- */
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function showToast(msg, ms){
+  ms = ms||3200;
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, ms);
+}
+
+/* ---------- 外圈刻度 ---------- */
+const bezel = document.getElementById('bezelOuter');
+for(let i=0;i<60;i++){
+  const t = document.createElement('div');
+  t.className = 'tick'+(i%7===0?' hl':'');
+  t.style.transform = 'rotate('+(i*6)+'deg)';
+  bezel.appendChild(t);
+}
+
+/* ---------- 前哨站 + 光束（以 dialRotor 自身中心 470,470 为极坐标原点）---------- */
+const ROT = {cx:470, cy:470, bezelR:470, outR:350};
+const outposts = [
+  {deg:-70, name:'北境哨站·01', info:'产能 92% · 坐标 (12.4, 31.2)'},
+  {deg:200, name:'西境哨站·02', info:'产能 78% · 坐标 (-8.1, 14.7)'},
+  {deg:-15, name:'东境哨站·03', info:'产能 85% · 坐标 (24.6, 10.9)'},
+  {deg:100, name:'南境哨站·04', info:'产能 97% · 坐标 (16.3, -22.4)'}
+];
+const rotor = document.getElementById('dialRotor');
+outposts.forEach(function(o,i){
+  const rad = o.deg*Math.PI/180;
+  const x = ROT.cx + ROT.outR*Math.cos(rad);
+  const y = ROT.cy + ROT.outR*Math.sin(rad);
+
+  const beam = document.createElement('div');
+  beam.className = 'beam';
+  beam.style.width = ROT.bezelR+'px';
+  beam.style.background = 'linear-gradient(90deg, rgba(242,170,60,0) 0%, rgba(242,170,60,0.9) '+((ROT.outR/ROT.bezelR)*100)+'%, rgba(242,170,60,0) 100%)';
+  beam.style.transform = 'rotate('+o.deg+'deg)';
+  rotor.appendChild(beam);
+
+  const el = document.createElement('div');
+  el.className = 'outpost';
+  el.id = 'op'+i;
+  el.style.left = x+'px';
+  el.style.top = y+'px';
+  el.innerHTML = '<div class="ring"></div><div class="sq"></div><div class="lbl">OUTPOST</div>';
+  rotor.appendChild(el);
+
+  el.addEventListener('click', function(e){
+    e.stopPropagation();
+    const r = el.getBoundingClientRect();
+    const tip = document.getElementById('tooltip');
+    tip.innerHTML = '<b style="color:#f2d230">'+o.name+'</b><br>'+o.info;
+    tip.style.left = (r.right+14)+'px';
+    tip.style.top = (r.top)+'px';
+    tip.style.display='block';
+  });
+});
+stage.addEventListener('click', function(e){
+  if(!e.target.closest('.outpost')) document.getElementById('tooltip').style.display='none';
+});
+
+/* ---------- Three.js 地形 ---------- */
+try{
+  const canvas = document.getElementById('terrainCanvas');
+  canvas.width = 940; canvas.height = 940;
+  const renderer = new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
+  renderer.setSize(940,940,false);
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-470,470,470,-470,1,2000);
+  camera.position.z = 1000;
+
+  function makeBlob(cx,cy,color,rings,baseR){
+    rings=rings||5; baseR=baseR||55;
+    const group = new THREE.Group();
+    const seed = Math.random()*10;
+    for(let r=0;r<rings;r++){
+      const pts=[]; const rad = baseR+r*28; const segs=64;
+      for(let i=0;i<=segs;i++){
+        const a=(i/segs)*Math.PI*2;
+        const noise = Math.sin(a*3+seed+r)*9 + Math.cos(a*5+seed)*5;
+        pts.push(new THREE.Vector3(cx+Math.cos(a)*(rad+noise), cy+Math.sin(a)*(rad+noise), 0));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+      const mat = new THREE.LineBasicMaterial({color:color, transparent:true, opacity:0.55});
+      group.add(new THREE.LineLoop(geo, mat));
+    }
+    return group;
+  }
+  const terrainGroup = new THREE.Group();
+  terrainGroup.add(makeBlob(120,210,0x4fc3d1));
+  terrainGroup.add(makeBlob(-250,10,0xd1954f));
+  terrainGroup.add(makeBlob(50,-280,0xd9d9d9));
+  scene.add(terrainGroup);
+
+  function renderLoop(){ requestAnimationFrame(renderLoop); renderer.render(scene,camera); }
+  renderLoop();
+}catch(err){ console.warn('地形渲染失败', err); }
+
+/* ---------- 拖拽旋转 ---------- */
+let dialAngle=0, dialVel=0, dragging=false, lastX=0;
+function applyDial(){ rotor.style.transform = 'rotate('+dialAngle+'deg)'; }
+function dragStart(x){ dragging=true; lastX=x; dialVel=0; }
+function dragMove(x){ if(!dragging) return; const d=x-lastX; dialAngle+=d*0.25; dialVel=d*0.25; lastX=x; applyDial(); }
+function dragEnd(){ dragging=false; }
+stage.addEventListener('mousedown', function(e){ dragStart(e.clientX); });
+window.addEventListener('mousemove', function(e){ dragMove(e.clientX); });
+window.addEventListener('mouseup', dragEnd);
+stage.addEventListener('touchstart', function(e){ if(e.touches.length===1) dragStart(e.touches[0].clientX); }, {passive:true});
+stage.addEventListener('touchmove', function(e){ if(e.touches.length===1) dragMove(e.touches[0].clientX); }, {passive:true});
+stage.addEventListener('touchend', dragEnd);
+(function inertiaLoop(){
+  requestAnimationFrame(inertiaLoop);
+  if(!dragging && Math.abs(dialVel)>0.01){ dialAngle+=dialVel; dialVel*=0.92; applyDial(); }
+})();
+
+/* ---------- 指针跟随(鼠标 或 陀螺仪，二选一) ---------- */
+const needle = document.getElementById('needle');
+let baseAngle = 145, targetAngle = baseAngle;
+let inputMode = 'mouse';
+const centerScreen = {x:1590, y:660};
+document.addEventListener('mousemove', function(e){
+  if(inputMode!=='mouse') return;
+  const r = stage.getBoundingClientRect();
+  const cx = r.left + (centerScreen.x/2560)*r.width;
+  const cy = r.top + (centerScreen.y/1200)*r.height;
+  targetAngle = Math.atan2(e.clientY-cy, e.clientX-cx)*180/Math.PI;
+});
+function needleLoop(){
+  requestAnimationFrame(needleLoop);
+  const cur = parseFloat(needle.dataset.cur||baseAngle);
+  let diff = targetAngle-cur;
+  while(diff>180) diff-=360; while(diff<-180) diff+=360;
+  const next = cur+diff*0.04;
+  needle.dataset.cur = next;
+  needle.style.transform = 'translate(-50%,-50%) rotate('+next+'deg)';
+}
+needle.dataset.cur = baseAngle;
+needleLoop();
+
+/* ---------- 滚轮缩放 ---------- */
+let dialScale=1;
+stage.addEventListener('wheel', function(e){
+  e.preventDefault();
+  dialScale += (e.deltaY>0?-0.05:0.05);
+  dialScale = Math.min(1.3, Math.max(0.75, dialScale));
+  rotor.style.transform = 'rotate('+dialAngle+'deg) scale('+dialScale+')';
+}, {passive:false});
+
+/* ---------- 资源自增 ---------- */
+const cubeValEl=document.getElementById('cubeVal'), coinValEl=document.getElementById('coinVal');
+let cubeN=2468, coinN=161753;
+setInterval(function(){
+  cubeN+=Math.floor(Math.random()*3); coinN+=Math.floor(Math.random()*40);
+  cubeValEl.textContent=cubeN.toLocaleString(); coinValEl.textContent=coinN.toLocaleString();
+}, 2500);
+
+/* ---------- 面板点击高亮 ---------- */
+document.querySelectorAll('.panel,.rpanel,.ticon').forEach(function(p){
+  p.addEventListener('click', function(){
+    let group='.panel';
+    if(p.classList.contains('rpanel')) group='.rpanel';
+    else if(p.classList.contains('ticon')) group='.ticon';
+    document.querySelectorAll(group).forEach(function(x){ x.classList.remove('active'); });
+    p.classList.add('active');
+  });
+});
+
+/* ---------- 部署按钮 ---------- */
+document.getElementById('deployBtn').addEventListener('click', function(){
+  const btn=document.getElementById('deployBtn');
+  btn.classList.remove('pulse'); void btn.offsetWidth; btn.classList.add('pulse');
+  showToast('部署请求已发送 → 四号谷地 [16.3, 14.5]');
+});
+setTimeout(function(){ document.getElementById('hint').style.opacity=0; }, 5000);
+
+/* ---------- 全屏 ---------- */
+const fsBtn=document.getElementById('fsBtn');
+let isPseudoFS=false;
+function tryNativeFS(){
+  const el=document.documentElement;
+  const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
+  if(req) return req.call(el).then(function(){return true;}).catch(function(){return false;});
+  return Promise.resolve(false);
+}
+function enterPseudo(){
+  document.body.style.position='fixed'; document.body.style.inset='0'; window.scrollTo(0,1);
+  isPseudoFS=true;
+  showToast('已开启沉浸模式(如地址栏仍显示,建议用系统浏览器打开或"添加到主屏幕")');
+}
+fsBtn.addEventListener('click', async function(){
+  const fsEl=document.fullscreenElement||document.webkitFullscreenElement;
+  if(fsEl||isPseudoFS){
+    if(document.exitFullscreen) document.exitFullscreen().catch(function(){});
+    isPseudoFS=false; fsBtn.classList.remove('on'); return;
+  }
+  const ok = await tryNativeFS();
+  if(!ok) enterPseudo();
+  fsBtn.classList.add('on');
+  setTimeout(fitStage,300);
+});
+document.addEventListener('fullscreenchange', function(){
+  fsBtn.classList.toggle('on', !!document.fullscreenElement);
+  setTimeout(fitStage,200);
+});
+
+/* ---------- 陀螺仪(重点修复) ---------- */
+const gyroBtn=document.getElementById('gyroBtn');
+const gyroModal=document.getElementById('gyroModal');
+let gyroOn=false, gyroBaseline=null, gyroGotData=false;
+
+function getOrientAngle(){
+  if(screen.orientation && typeof screen.orientation.angle==='number') return screen.orientation.angle;
+  if(typeof window.orientation==='number') return window.orientation;
+  return 0;
+}
+function handleOrientation(e){
+  if(e.beta===null || e.beta===undefined) return;
+  gyroGotData = true;
+  let beta=e.beta, gamma=e.gamma;
+  const ang=getOrientAngle();
+  if(ang===90){ const t=beta; beta=-gamma; gamma=t; }
+  else if(ang===-90||ang===270){ const t=beta; beta=gamma; gamma=-t; }
+  else if(ang===180){ beta=-beta; gamma=-gamma; }
+  if(!gyroBaseline) gyroBaseline={beta:beta, gamma:gamma};
+  const db=beta-gyroBaseline.beta, dg=gamma-gyroBaseline.gamma;
+  targetAngle = baseAngle + dg*1.4;
+  dialAngle += db*0.015;
+  applyDial();
+}
+function startGyro(){
+  inputMode='gyro';
+  gyroGotData=false; gyroBaseline=null;
+  window.addEventListener('deviceorientation', handleOrientation, true);
+  gyroOn=true; gyroBtn.classList.add('on');
+  showToast('陀螺仪已启用 · 倾斜手机查看视差');
+  setTimeout(function(){
+    if(!gyroGotData){
+      showToast('未收到传感器数据：请确认①用 HTTPS 网址打开(file://本地文件在多数手机浏览器会被禁用传感器) ②已允许运动传感器权限 ③设备支持陀螺仪', 6000);
+    }
+  }, 1800);
+}
+function stopGyro(){
+  window.removeEventListener('deviceorientation', handleOrientation, true);
+  gyroOn=false; gyroBtn.classList.remove('on'); gyroBaseline=null; inputMode='mouse';
+}
+gyroBtn.addEventListener('click', function(){
+  if(gyroOn){ stopGyro(); showToast('陀螺仪已关闭'); return; }
+  if(!window.isSecureContext){
+    showToast('当前不是安全环境(HTTPS)，陀螺仪大概率无法使用。建议把文件上传到 Netlify/GitHub Pages 等获得 https 链接后再打开。仍尝试启用...', 5000);
+  }
+  if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+    gyroModal.classList.add('show');
+  } else if(window.DeviceOrientationEvent){
+    startGyro();
+  } else {
+    showToast('当前设备/浏览器不支持陀螺仪');
+  }
+});
+document.getElementById('gyroAllow').addEventListener('click', async function(){
+  gyroModal.classList.remove('show');
+  try{
+    const res = await DeviceOrientationEvent.requestPermission();
+    if(res==='granted') startGyro();
+    else showToast('权限被拒绝，无法启用陀螺仪');
+  }catch(err){ showToast('请求权限失败: '+err.message); }
+});
+
+})();
+</script>
+</body>
+</html>
